@@ -81,6 +81,20 @@ L.Toolbar2.Action = L.Handler.extend({
 				if (typeof removeHooks === 'function') { removeHooks.call(this, map); }
 				subToolbar._hide();
 			};
+
+			/* Store reference so destroy() can remove it from the map */
+			this._subToolbar = subToolbar;
+		}
+	},
+
+	/* Called by the parent toolbar's onRemove to clean up sub-toolbars */
+	destroy: function() {
+		if (this._subToolbar) {
+			var map = this._subToolbar._arguments && this._subToolbar._arguments[0];
+			if (map && map.hasLayer && map.hasLayer(this._subToolbar)) {
+				map.removeLayer(this._subToolbar);
+			}
+			this._subToolbar = null;
 		}
 	}
 });

@@ -69,7 +69,12 @@ module.exports = function(grunt) {
             }
         },
 
-        autoprefixer: {
+        postcss: {
+            options: {
+                processors: [
+                    require('autoprefixer')()
+                ]
+            },
             dist: {
                 src:    'dist/leaflet.toolbar-src.css',
                 dest:   'dist/leaflet.toolbar-src.css'
@@ -105,9 +110,8 @@ module.exports = function(grunt) {
         karma: {
             travis: {
                 configFile: 'test/karma.conf.js',
-                background: false,
                 singleRun: true,
-                browsers: [ 'PhantomJS' ]
+                browsers: [ 'ChromeHeadless' ]
             },
             development: {
                 configFile: 'test/karma.conf.js',
@@ -115,7 +119,6 @@ module.exports = function(grunt) {
             },
             unit: {
                 configFile: 'test/karma.conf.js',
-                background: false,
                 singleRun: true
             }
         },
@@ -191,7 +194,7 @@ module.exports = function(grunt) {
         'uglify:dist'
     ]);
 
-    grunt.registerTask('build:css', [ 'less', 'autoprefixer', 'cssmin' ]);
+    grunt.registerTask('build:css', [ 'less', 'postcss', 'cssmin' ]);
 
     grunt.registerTask('coverage', 'Custom commmand-line reporter for karma-coverage', function() {
         var coverageReports = grunt.file.expand('coverage/*/coverage.txt'),

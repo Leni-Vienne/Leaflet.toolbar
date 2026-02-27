@@ -37,15 +37,26 @@ window.L.Toolbar2 = (L.Layer || L.Class).extend({
 	},
 
 	onRemove: function(map) {
-		/* 
-		 * TODO: Cleanup event listeners. 
-		 * For some reason, this throws:
-		 * "Uncaught TypeError: Cannot read property 'dragging' of null"
-		 * on this._marker when a toolbar icon is clicked.
-		 */
-		// for (var i = 0, l = this._disabledEvents.length; i < l; i++) {
-		// 	L.DomEvent.off(this._ul, this._disabledEvents[i], L.DomEvent.stopPropagation);
-		// }
+		var i, l, action;
+
+		// Clean up _ul event listeners (fixes memory leak: detached event listeners)
+		if (this._ul && this._disabledEvents) {
+			for (i = 0, l = this._disabledEvents.length; i < l; i++) {
+				L.DomEvent.off(this._ul, this._disabledEvents[i], L.DomEvent.stopPropagation);
+			}
+		}
+
+		// Clean up action icon listeners and sub-toolbars
+		if (this._actionInstances) {
+			for (i = 0, l = this._actionInstances.length; i < l; i++) {
+				action = this._actionInstances[i];
+				if (action && action._link) {
+					L.DomEvent.off(action._link, 'click', action.enable, action);
+				}
+				if (action && action.destroy) { action.destroy(); }
+			}
+			this._actionInstances = null;
+		}
 
 		if (this._calculateDepth() === 0) {
 			delete map._toolbars[this._toolbar_type];
@@ -57,6 +68,25 @@ window.L.Toolbar2 = (L.Layer || L.Class).extend({
 			className = baseClass + ' ' + this.options.className,
 			Action, action,
 			i, j, l, m;
+
+		// Clean up previous _ul listeners before overwriting (happens with singleton sub-toolbars)
+		if (this._ul && this._disabledEvents) {
+			for (j = 0, m = this._disabledEvents.length; j < m; j++) {
+				L.DomEvent.off(this._ul, this._disabledEvents[j], L.DomEvent.stopPropagation);
+			}
+		}
+
+		// Clean up previous action instances before overwriting
+		if (this._actionInstances) {
+			for (i = 0, l = this._actionInstances.length; i < l; i++) {
+				action = this._actionInstances[i];
+				if (action && action._link) {
+					L.DomEvent.off(action._link, 'click', action.enable, action);
+				}
+				if (action && action.destroy) { action.destroy(); }
+			}
+			this._actionInstances = null;
+		}
 
 		this._container = container;
 		this._ul = L.DomUtil.create('ul', className, container);
@@ -77,11 +107,13 @@ window.L.Toolbar2 = (L.Layer || L.Class).extend({
 		}
 
 		/* Instantiate each toolbar action and add its corresponding toolbar icon. */
+		this._actionInstances = [];
 		for (i = 0, l = this.options.actions.length; i < l; i++) {
 			Action = this._getActionConstructor(this.options.actions[i]);
 
 			action = new Action();
 			action._createIcon(this, this._ul, this._arguments);
+			this._actionInstances.push(action);
 		}
 	},
 
@@ -235,6 +267,20 @@ L.Toolbar2.Action = L.Handler.extend({
 				if (typeof removeHooks === 'function') { removeHooks.call(this, map); }
 				subToolbar._hide();
 			};
+
+			/* Store reference so destroy() can remove it from the map */
+			this._subToolbar = subToolbar;
+		}
+	},
+
+	/* Called by the parent toolbar's onRemove to clean up sub-toolbars */
+	destroy: function() {
+		if (this._subToolbar) {
+			var map = this._subToolbar._arguments && this._subToolbar._arguments[0];
+			if (map && map.hasLayer && map.hasLayer(this._subToolbar)) {
+				map.removeLayer(this._subToolbar);
+			}
+			this._subToolbar = null;
 		}
 	}
 });
