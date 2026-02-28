@@ -41,7 +41,7 @@
 .leaflet-toolbar-tip {
   width: 16px;
   height: 16px;
-  margin: -16px/2 auto 0;
+  margin: -8px auto 0;
   background-color: #fff;
   border: 2px solid rgba(0, 0, 0, 0.2);
   border-bottom-left-radius: 4px;
